@@ -18,23 +18,23 @@
 
 package org.apache.skywalking.oap.server.receiver.zipkin;
 
+import com.linecorp.armeria.common.HttpMethod;
+import java.util.Arrays;
 import org.apache.skywalking.oap.server.core.CoreModule;
 import org.apache.skywalking.oap.server.library.module.ModuleConfig;
 import org.apache.skywalking.oap.server.library.module.ModuleDefine;
 import org.apache.skywalking.oap.server.library.module.ModuleProvider;
 import org.apache.skywalking.oap.server.library.module.ModuleStartException;
 import org.apache.skywalking.oap.server.library.module.ServiceNotProvidedException;
-import org.apache.skywalking.oap.server.library.server.ServerException;
-import org.apache.skywalking.oap.server.library.server.jetty.JettyServer;
-import org.apache.skywalking.oap.server.library.server.jetty.JettyServerConfig;
-import org.apache.skywalking.oap.server.receiver.zipkin.handler.SpanV1JettyHandler;
-import org.apache.skywalking.oap.server.receiver.zipkin.handler.SpanV2JettyHandler;
+import org.apache.skywalking.oap.server.library.server.http.HTTPServer;
+import org.apache.skywalking.oap.server.library.server.http.HTTPServerConfig;
+import org.apache.skywalking.oap.server.receiver.zipkin.handler.ZipkinSpanHTTPHandler;
 import org.apache.skywalking.oap.server.telemetry.TelemetryModule;
 
 public class ZipkinReceiverProvider extends ModuleProvider {
     public static final String NAME = "default";
-    private ZipkinReceiverConfig config;
-    private JettyServer jettyServer;
+    private final ZipkinReceiverConfig config;
+    private HTTPServer httpServer;
 
     public ZipkinReceiverProvider() {
         config = new ZipkinReceiverConfig();
@@ -62,32 +62,31 @@ public class ZipkinReceiverProvider extends ModuleProvider {
 
     @Override
     public void start() throws ServiceNotProvidedException, ModuleStartException {
-        JettyServerConfig jettyServerConfig = JettyServerConfig.builder()
-                                                               .host(config.getHost())
-                                                               .port(config.getPort())
-                                                               .contextPath(config.getContextPath())
-                                                               .jettyIdleTimeOut(config.getJettyIdleTimeOut())
-                                                               .jettyAcceptorPriorityDelta(
-                                                                   config.getJettyAcceptorPriorityDelta())
-                                                               .jettyMinThreads(config.getJettyMinThreads())
-                                                               .jettyMaxThreads(config.getJettyMaxThreads())
-                                                               .jettyAcceptQueueSize(config.getJettyAcceptQueueSize())
-                                                               .build();
+        if (config.getSampleRate() < 0 || config.getSampleRate() > 10000) {
+            throw new IllegalArgumentException(
+                "sampleRate: " + config.getSampleRate() + ", should be between 0 and 10000");
+        }
+        HTTPServerConfig httpServerConfig = HTTPServerConfig.builder()
+                                                            .host(config.getRestHost())
+                                                            .port(config.getRestPort())
+                                                            .contextPath(config.getRestContextPath())
+                                                            .idleTimeOut(config.getRestIdleTimeOut())
+                                                            .maxThreads(config.getRestMaxThreads())
+                                                            .acceptQueueSize(config.getRestAcceptQueueSize())
+                                                            .build();
 
-        jettyServer = new JettyServer(jettyServerConfig);
-        jettyServer.initialize();
+        httpServer = new HTTPServer(httpServerConfig);
+        httpServer.initialize();
 
-        jettyServer.addHandler(new SpanV1JettyHandler(config, getManager()));
-        jettyServer.addHandler(new SpanV2JettyHandler(config, getManager()));
+        httpServer.addHandler(
+            new ZipkinSpanHTTPHandler(config, getManager()),
+            Arrays.asList(HttpMethod.POST, HttpMethod.GET)
+        );
     }
 
     @Override
-    public void notifyAfterCompleted() throws ModuleStartException {
-        try {
-            jettyServer.start();
-        } catch (ServerException e) {
-            throw new ModuleStartException(e.getMessage(), e);
-        }
+    public void notifyAfterCompleted() {
+        httpServer.start();
     }
 
     @Override

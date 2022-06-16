@@ -31,14 +31,14 @@ import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.auth.BasicToken;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.Exceptions;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import lombok.Getter;
@@ -50,7 +50,9 @@ import org.apache.skywalking.library.elasticsearch.client.DocumentClient;
 import org.apache.skywalking.library.elasticsearch.client.IndexClient;
 import org.apache.skywalking.library.elasticsearch.client.SearchClient;
 import org.apache.skywalking.library.elasticsearch.client.TemplateClient;
+import org.apache.skywalking.library.elasticsearch.requests.search.Scroll;
 import org.apache.skywalking.library.elasticsearch.requests.search.Search;
+import org.apache.skywalking.library.elasticsearch.requests.search.SearchParams;
 import org.apache.skywalking.library.elasticsearch.response.NodeInfo;
 import org.apache.skywalking.library.elasticsearch.response.search.SearchResponse;
 import org.apache.skywalking.oap.server.library.util.StringUtil;
@@ -81,7 +83,8 @@ public final class ElasticSearch implements Closeable {
                   String username, String password,
                   EndpointGroup endpointGroup,
                   ClientFactory clientFactory,
-                  Consumer<Boolean> healthyListener) {
+                  Consumer<Boolean> healthyListener,
+                  Duration responseTimeout) {
         this.endpointGroup = endpointGroup;
         this.clientFactory = clientFactory;
         if (healthyListener != null) {
@@ -94,6 +97,7 @@ public final class ElasticSearch implements Closeable {
         final WebClientBuilder builder =
             WebClient.builder(protocol, endpointGroup)
                      .factory(clientFactory)
+                     .responseTimeout(responseTimeout)
                      .decorator(LoggingClient.builder()
                                              .logger(log)
                                              .newDecorator())
@@ -101,7 +105,7 @@ public final class ElasticSearch implements Closeable {
                                               .maxTotalAttempts(3)
                                               .newDecorator());
         if (StringUtil.isNotBlank(username) && StringUtil.isNotBlank(password)) {
-            builder.auth(BasicToken.of(username, password));
+            builder.auth(AuthToken.ofBasic(username, password));
         }
         client = builder.build();
         version = new CompletableFuture<>();
@@ -167,12 +171,24 @@ public final class ElasticSearch implements Closeable {
         return aliasClient;
     }
 
-    public SearchResponse search(Search search, Map<String, ?> params, String... index) {
+    public SearchResponse search(Search search, SearchParams params, String... index) {
         return searchClient.search(search, params, index);
     }
 
     public SearchResponse search(Search search, String... index) {
         return search(search, null, index);
+    }
+
+    public SearchResponse scroll(Duration contextRetention, String scrollId) {
+        return searchClient.scroll(
+            Scroll.builder()
+                  .contextRetention(contextRetention)
+                  .scrollId(scrollId)
+                  .build());
+    }
+
+    public boolean deleteScrollContext(String scrollId) {
+        return searchClient.deleteScrollContext(scrollId);
     }
 
     @Override

@@ -20,6 +20,7 @@ package org.apache.skywalking.oap.server.storage.plugin.elasticsearch;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.skywalking.oap.server.core.storage.annotation.ElasticSearch;
 import org.apache.skywalking.oap.server.core.storage.annotation.SuperDataset;
 import org.apache.skywalking.oap.server.library.module.ModuleConfig;
 
@@ -34,13 +35,18 @@ public class StorageModuleElasticsearchConfig extends ModuleConfig {
      *
      * @since 8.7.0
      */
-    private int connectTimeout = 500;
+    private int connectTimeout = 3000;
     /**
      * Socket timeout of ElasticSearch client.
      *
      * @since 8.7.0
      */
     private int socketTimeout = 30000;
+    /**
+     * @since 9.0.0 the response timeout of ElasticSearch client (Armeria under the hood), set to 0 to disable response
+     * timeout.
+     */
+    private int responseTimeout = 15000;
     /**
      * @since 6.4.0, the index of metrics and traces data in minute/hour/month precision are organized in days. ES
      * storage creates new indexes in every day.
@@ -75,7 +81,7 @@ public class StorageModuleElasticsearchConfig extends ModuleConfig {
      */
     private int bulkActions = 5000;
     /**
-     * Period of flesh, no matter `bulkActions` reached or not.
+     * Period of flush, no matter `bulkActions` reached or not.
      * INT(flushInterval * 2/3) would be used for index refresh period.
      * Unit is second.
      *
@@ -103,16 +109,28 @@ public class StorageModuleElasticsearchConfig extends ModuleConfig {
     private String trustStorePass;
     private int resultWindowMaxSize = 10000;
     private int metadataQueryMaxSize = 5000;
+    /**
+     * @since 9.0.0 The batch size that is used to scroll on the large results,
+     * if {@link #metadataQueryMaxSize} is larger than the maximum result window in
+     * ElasticSearch server, this can be used to retrieve all results.
+     */
+    private int scrollingBatchSize = 5000;
     private int segmentQueryMaxSize = 200;
     private int profileTaskQueryMaxSize = 200;
     /**
-     * The default analyzer for match query field. {@link org.apache.skywalking.oap.server.core.storage.annotation.Column.AnalyzerType#OAP_ANALYZER}
+     * The batch size that is used to scroll on the large eBPF profiling data result.
+     * The profiling data contains full-stack symbol data, which could make ElasticSearch response large content.
+     * {@link #scrollingBatchSize} would not be used in profiling data query.
+     */
+    private int profileDataQueryBatchSize = 100;
+    /**
+     * The default analyzer for match query field. {@link ElasticSearch.MatchQuery.AnalyzerType#OAP_ANALYZER}
      *
      * @since 8.4.0
      */
     private String oapAnalyzer = "{\"analyzer\":{\"oap_analyzer\":{\"type\":\"stop\"}}}";
     /**
-     * The log analyzer for match query field. {@link org.apache.skywalking.oap.server.core.storage.annotation.Column.AnalyzerType#OAP_LOG_ANALYZER}
+     * The log analyzer for match query field. {@link ElasticSearch.MatchQuery.AnalyzerType#OAP_LOG_ANALYZER}
      *
      * @since 8.4.0
      */

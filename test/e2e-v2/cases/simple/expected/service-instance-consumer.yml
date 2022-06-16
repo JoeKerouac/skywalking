@@ -25,7 +25,7 @@
   - name: hostname
     value: {{ notEmpty .value }}
   - name: Process No.
-    value: "1"
+    value: {{ notEmpty .value }}
   - name: Start Time
     value: {{ notEmpty .value }}
   - name: JVM Arguments
@@ -37,5 +37,4 @@
   {{- end}}
   language: JAVA
   instanceuuid: {{ b64enc "e2e-service-consumer" }}.1_{{ b64enc "consumer1" }}
-  layer: GENERAL
 {{- end}}

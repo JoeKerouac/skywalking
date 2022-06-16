@@ -20,21 +20,24 @@ package org.apache.skywalking.oap.server.receiver.zipkin;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.skywalking.oap.server.core.Const;
 import org.apache.skywalking.oap.server.library.module.ModuleConfig;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Setter
 @Getter
 public class ZipkinReceiverConfig extends ModuleConfig {
-    private String host;
-    private int port;
-    private String contextPath;
-    private int jettyMinThreads = 1;
-    private int jettyMaxThreads = 200;
-    private long jettyIdleTimeOut = 30000;
-    private int jettyAcceptorPriorityDelta = 0;
-    private int jettyAcceptQueueSize = 0;
-    private List<String> instanceNameRule = new ArrayList<>();
+    private String restHost;
+    private int restPort;
+    private String restContextPath;
+    private int restMaxThreads = 200;
+    private long restIdleTimeOut = 30000;
+    private int restAcceptQueueSize = 0;
+    private String searchableTracesTags = DEFAULT_SEARCHABLE_TAG_KEYS;
+    private int sampleRate = 10000;
+
+    private static final String DEFAULT_SEARCHABLE_TAG_KEYS = String.join(
+        Const.COMMA,
+        "http.method"
+    );
 }
+

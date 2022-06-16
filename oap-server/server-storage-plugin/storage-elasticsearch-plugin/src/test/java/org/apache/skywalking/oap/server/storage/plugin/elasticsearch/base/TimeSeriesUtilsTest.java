@@ -21,6 +21,7 @@ package org.apache.skywalking.oap.server.storage.plugin.elasticsearch.base;
 import com.google.common.collect.Lists;
 import org.apache.skywalking.oap.server.core.analysis.DownSampling;
 import org.apache.skywalking.oap.server.core.storage.model.Model;
+import org.apache.skywalking.oap.server.core.storage.model.SQLDatabaseModelExtension;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,14 +37,14 @@ public class TimeSeriesUtilsTest {
 
     @Before
     public void prepare() {
-        superDatasetModel = new Model("superDatasetModel", Lists.newArrayList(), Lists.newArrayList(),
-                                      0, DownSampling.Minute, true, true, "", true
+        superDatasetModel = new Model("superDatasetModel", Lists.newArrayList(),
+                                      0, DownSampling.Second, true, true, "", true, new SQLDatabaseModelExtension()
         );
-        normalRecordModel = new Model("normalRecordModel", Lists.newArrayList(), Lists.newArrayList(),
-                                      0, DownSampling.Minute, true, false, "", true
+        normalRecordModel = new Model("normalRecordModel", Lists.newArrayList(),
+                                      0, DownSampling.Second, true, false, "", true, new SQLDatabaseModelExtension()
         );
-        normalMetricsModel = new Model("normalMetricsModel", Lists.newArrayList(), Lists.newArrayList(),
-                                       0, DownSampling.Minute, false, false, "", true
+        normalMetricsModel = new Model("normalMetricsModel", Lists.newArrayList(),
+                                       0, DownSampling.Minute, false, false, "", true, new SQLDatabaseModelExtension()
         );
         TimeSeriesUtils.setSUPER_DATASET_DAY_STEP(1);
         TimeSeriesUtils.setDAY_STEP(3);

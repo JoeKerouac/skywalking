@@ -40,6 +40,7 @@ import org.apache.skywalking.library.elasticsearch.ElasticSearchVersion;
 import org.apache.skywalking.library.elasticsearch.bulk.BulkProcessor;
 import org.apache.skywalking.library.elasticsearch.requests.search.Query;
 import org.apache.skywalking.library.elasticsearch.requests.search.Search;
+import org.apache.skywalking.library.elasticsearch.requests.search.SearchParams;
 import org.apache.skywalking.library.elasticsearch.response.Document;
 import org.apache.skywalking.library.elasticsearch.response.Index;
 import org.apache.skywalking.library.elasticsearch.response.IndexTemplate;
@@ -81,6 +82,8 @@ public class ElasticSearchClient implements Client, HealthCheckable {
 
     private final int socketTimeout;
 
+    private final int responseTimeout;
+
     private final int numHttpClientThread;
 
     private final AtomicReference<ElasticSearch> es = new AtomicReference<>();
@@ -94,6 +97,7 @@ public class ElasticSearchClient implements Client, HealthCheckable {
                                Function<String, String> indexNameConverter,
                                int connectTimeout,
                                int socketTimeout,
+                               int responseTimeout,
                                int numHttpClientThread) {
         this.clusterNodes = clusterNodes;
         this.protocol = protocol;
@@ -104,6 +108,7 @@ public class ElasticSearchClient implements Client, HealthCheckable {
         this.indexNameConverter = indexNameConverter;
         this.connectTimeout = connectTimeout;
         this.socketTimeout = socketTimeout;
+        this.responseTimeout = responseTimeout;
         this.numHttpClientThread = numHttpClientThread;
     }
 
@@ -117,6 +122,7 @@ public class ElasticSearchClient implements Client, HealthCheckable {
                 .endpoints(clusterNodes.split(","))
                 .protocol(protocol)
                 .connectTimeout(connectTimeout)
+                .responseTimeout(responseTimeout)
                 .socketTimeout(socketTimeout)
                 .numHttpClientThread(numHttpClientThread)
                 .healthyListener(healthy -> {
@@ -247,21 +253,39 @@ public class ElasticSearchClient implements Client, HealthCheckable {
             Arrays.stream(indices.get())
                   .map(indexNameConverter)
                   .toArray(String[]::new);
+        final SearchParams params = new SearchParams()
+            .allowNoIndices(true)
+            .ignoreUnavailable(true)
+            .expandWildcards("open");
         return es.get().search(
             search,
-            ImmutableMap.of(
-                "ignore_unavailable", true,
-                "allow_no_indices", true,
-                "expand_wildcards", "open"
-            ),
-            indexNames
-        );
+            params,
+            indexNames);
     }
 
     public SearchResponse search(String indexName, Search search) {
         indexName = indexNameConverter.apply(indexName);
 
         return es.get().search(search, indexName);
+    }
+
+    public SearchResponse search(String indexName, Search search, SearchParams params) {
+        indexName = indexNameConverter.apply(indexName);
+
+        return es.get().search(search, params, indexName);
+    }
+
+    public SearchResponse scroll(Duration contextRetention, String scrollId) {
+        return es.get().scroll(contextRetention, scrollId);
+    }
+
+    public boolean deleteScrollContextQuietly(String scrollId) {
+        try {
+            return es.get().deleteScrollContext(scrollId);
+        } catch (Exception e) {
+            log.warn("Failed to delete scroll context: {}", scrollId, e);
+            return false;
+        }
     }
 
     public Optional<Document> get(String indexName, String id) {

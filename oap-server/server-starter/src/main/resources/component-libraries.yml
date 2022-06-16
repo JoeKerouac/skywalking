@@ -398,6 +398,21 @@ Apache-Kylin-jdbc-driver:
 Apache-Kylin:
   id: 122
   languages: Java
+GuavaEventBus:
+  id: 123
+  languages: Java
+AWSLambdaTrigger:
+  id: 124
+  languages: Java,C#,Node.js,Python
+AWSLambdaGatewayAPIHTTP:
+  id: 125
+  languages: Java,C#,Node.js,Python
+AWSLambdaGatewayAPIREST:
+  id: 126
+  languages: Java,C#,Node.js,Python
+Apache-ShenYu:
+  id: 127
+  languages: Java
 
 # .NET/.NET Core components
 # [3000, 4000) for C#/.NET only
@@ -448,6 +463,9 @@ AspNet:
   languages: C#
 SmartSql:
   id: 3016
+  languages: C#
+FreeSql:
+  id: 3017
   languages: C#
 
 # NoeJS components
@@ -506,6 +524,9 @@ Kratos:
 GoMysql:
   id: 5012
   languages: Golang
+OpenFunction:
+  id: 5013
+  languages: Golang,Node.js,Python,Java
 
 # Lua components
 # [6000, 7000) for Lua agent
@@ -558,6 +579,12 @@ Celery:
   languages: Python
 Falcon:
   id: 7012
+  languages: Python
+MysqlClient:
+  id: 7013
+  languages: Python
+FastAPI:
+  id: 7014
   languages: Python
 
 # PHP components
@@ -650,3 +677,4 @@ Component-Server-Mappings:
   GoMysql: Mysql
   ClickHouse-jdbc-driver: ClickHouse
   Apache-Kylin-jdbc-driver: Apache-Kylin
+  MysqlClient: Mysql
